@@ -1,0 +1,42 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript"
+  ],
+  "plugins": ["import"],
+  "rules": {
+    "import/order": [
+      "error",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+        "pathGroups": [
+          {
+            "pattern": "@/**",
+            "group": "internal"
+          }
+        ],
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        }
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/controllers/*", "@/models/*"],
+            "message": "Views should only access View-Models (hooks/stores).",
+            "from": "components/*"
+          },
+          {
+            "group": ["@/models/*"],
+            "message": "View-Models should only access Controllers.",
+            "from": "hooks/*"
+          }
+        ]
+      }
+    ]
+  }
+}

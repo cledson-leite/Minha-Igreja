@@ -1,0 +1,7 @@
+{
+  "name": "Minha Igreja",
+  "description": "Sistema completo de gestão eclesiástica com finanças, membros, células e eventos.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
