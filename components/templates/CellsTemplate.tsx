@@ -185,5 +185,3 @@ export const CellsTemplate = () => {
     </div>
   );
 };
-
-import { LayoutDashboard } from 'lucide-react';
