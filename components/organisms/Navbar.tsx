@@ -48,15 +48,6 @@ export const Navbar = () => {
             />
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleDarkMode}
-            className="rounded-xl size-11 hover:bg-surface"
-          >
-            {isDarkMode ? <Sun className="size-5 text-text-secondary" /> : <Moon className="size-5 text-text-secondary" />}
-          </Button>
-          
           <Button variant="ghost" size="icon" className="rounded-xl size-11 hover:bg-surface">
             <Bell className="size-5 text-text-secondary" />
           </Button>

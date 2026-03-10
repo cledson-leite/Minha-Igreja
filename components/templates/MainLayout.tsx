@@ -18,12 +18,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isDarkMode]);
 
   return (
-    <div className="flex min-h-screen bg-background text-text-primary transition-colors duration-300">
-      <div className="flex w-full min-h-screen bg-background">
+    <div className="flex h-screen bg-background text-text-primary transition-colors duration-300 overflow-hidden">
+      <div className="flex w-full h-full bg-background">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Navbar />
-          <main className="flex-1 overflow-y-auto px-6 py-8">
+          <main className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
             <div className="mx-auto max-w-7xl">
               {children}
             </div>
