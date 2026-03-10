@@ -8,11 +8,14 @@ import {
   Users, 
   Calendar,
   ChevronRight,
-  Cake
+  Cake,
+  Plus
 } from 'lucide-react';
 import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
 import { formatCurrency } from '@/shared/utils';
+import { Modal } from '@/components/atoms/Modal';
+import { MemberForm } from '@/components/organisms/MemberForm';
 
 import { useRouter } from 'next/navigation';
 import { useChatStore } from '@/store/useChatStore';
@@ -20,6 +23,7 @@ import { useChatStore } from '@/store/useChatStore';
 export const DashboardTemplate = () => {
   const router = useRouter();
   const { sendRandomBirthdayMessage } = useChatStore();
+  const [isMemberModalOpen, setIsMemberModalOpen] = React.useState(false);
 
   const handleCongratulate = (name: string) => {
     sendRandomBirthdayMessage('3'); // Defaulting to Ricardo for demo purposes
@@ -48,6 +52,31 @@ export const DashboardTemplate = () => {
 
   return (
     <div className="space-y-8">
+      {/* Quick Actions / Welcome */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-primary/5 p-6 rounded-2xl border border-primary/10">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-text-primary">Olá, Administrador!</h2>
+          <p className="text-text-secondary text-sm">Bem-vindo de volta ao painel de gestão da sua igreja.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button className="gap-2 shadow-lg shadow-primary/20" onClick={() => setIsMemberModalOpen(true)}>
+            <Plus className="size-4" />
+            Novo Membro
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => router.push('/financeiro')}>
+            Nova Transação
+          </Button>
+        </div>
+      </div>
+
+      <Modal 
+        isOpen={isMemberModalOpen} 
+        onClose={() => setIsMemberModalOpen(false)} 
+        title="Cadastrar Novo Membro"
+      >
+        <MemberForm onSuccess={() => setIsMemberModalOpen(false)} />
+      </Modal>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
