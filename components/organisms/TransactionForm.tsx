@@ -19,6 +19,7 @@ const transactionSchema = z.object({
     message: 'Valor deve ser um número positivo',
   }),
   date: z.string().min(1, 'Informe a data'),
+  status: z.enum(['Confirmado', 'Pendente', 'Cancelado']),
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -50,6 +51,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
     defaultValues: {
       type: 'Registro',
       nature: 'Entrada',
+      status: 'Confirmado',
       date: new Date().toISOString().split('T')[0],
       church: churches[0] || 'Sede Central',
     },
@@ -73,6 +75,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       value: Number(data.value),
       type: data.type as TransactionType,
       nature: data.nature as TransactionNature,
+      status: data.status,
     });
     onSuccess();
   };
@@ -194,6 +197,18 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
             />
             {errors.date && <p className="text-error text-xs mt-1 font-bold">{errors.date.message}</p>}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-text-primary mb-1.5 uppercase tracking-wider">Status</label>
+          <select
+            {...register('status')}
+            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary appearance-none"
+          >
+            <option value="Confirmado">Confirmado</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
         </div>
       </div>
 

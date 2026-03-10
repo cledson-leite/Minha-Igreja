@@ -20,20 +20,63 @@ import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
 import { Modal } from '@/components/atoms/Modal';
 import { TransactionForm } from '@/components/organisms/TransactionForm';
+import { FinanceFilterBar } from '@/components/organisms/FinanceFilterBar';
 import { useSearchParams } from 'next/navigation';
 import { useFinance } from '@/hooks/useFinance';
 import { cn } from '@/shared/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  PieChart as RePieChart, 
+  Pie, 
+  Cell 
+} from 'recharts';
 
 export const FinanceTemplate = () => {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
-  const { transactions, totals, formatCurrency } = useFinance();
+  const { 
+    transactions, 
+    allTransactions, 
+    totals, 
+    allTimeTotals,
+    chartData,
+    categoryData,
+    categoryBreakdown,
+    formatCurrency, 
+    filters, 
+    setFilters 
+  } = useFinance();
+
+  const COLORS = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff'];
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
+  // Sync initial filter from URL
+  React.useEffect(() => {
+    if (filterParam && !filters.nature) {
+      setFilters({ ...filters, nature: filterParam });
+    }
+  }, [filterParam, filters, setFilters]);
+
+  // Extract unique values for filters
+  const availableResponsibles = Array.from(new Set(allTransactions.map(t => t.responsible)));
+  const availableChurches = Array.from(new Set(allTransactions.map(t => t.church)));
+  const availableCategories = Array.from(new Set(allTransactions.map(t => t.category)));
+  const availableOrigins = Array.from(new Set(allTransactions.map(t => t.origin)));
+  const availableTypes = Array.from(new Set(allTransactions.map(t => t.type)));
+  const availableNatures = Array.from(new Set(allTransactions.map(t => t.nature)));
+  const availableStatuses = Array.from(new Set(allTransactions.map(t => t.status)));
+
   const handleExportCSV = () => {
-    const headers = ['Data', 'Responsável', 'Igreja', 'Tipo', 'Natureza', 'Categoria', 'Origem', 'Valor'];
+    const headers = ['Data', 'Responsável', 'Igreja', 'Tipo', 'Natureza', 'Categoria', 'Origem', 'Valor', 'Status'];
     const rows = transactions.map(t => [
       t.date,
       t.responsible,
@@ -42,7 +85,8 @@ export const FinanceTemplate = () => {
       t.nature,
       t.category,
       t.origin,
-      t.value.toString()
+      t.value.toString(),
+      t.status
     ]);
 
     const csvContent = [
@@ -80,15 +124,14 @@ export const FinanceTemplate = () => {
     doc.text(`Total Entradas: ${formatCurrency(totals.income)}`, 14, 48);
     doc.text(`Total Saídas: ${formatCurrency(totals.expenses)}`, 14, 56);
 
-    const tableHeaders = [['Data', 'Responsável', 'Igreja', 'Tipo', 'Natureza', 'Categoria', 'Origem', 'Valor']];
+    const tableHeaders = [['Data', 'Responsável', 'Igreja', 'Natureza', 'Categoria', 'Status', 'Valor']];
     const tableRows = transactions.map(t => [
       t.date,
       t.responsible,
       t.church,
-      t.type,
       t.nature,
       t.category,
-      t.origin,
+      t.status,
       formatCurrency(t.value)
     ]);
 
@@ -144,24 +187,17 @@ export const FinanceTemplate = () => {
 
       {/* Filters */}
       <Card padding="sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-border cursor-pointer">
-            <CalendarIcon className="size-4 text-primary" />
-            <span className="text-sm font-medium text-text-primary">Período: Últimos 30 dias</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-border cursor-pointer">
-            <LayoutGrid className="size-4 text-primary" />
-            <span className="text-sm font-medium text-text-primary">Categoria: Todas</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-border cursor-pointer">
-            <Landmark className="size-4 text-primary" />
-            <span className="text-sm font-medium text-text-primary">Origem: Todas</span>
-          </div>
-          <div className="ml-auto flex items-center gap-2 text-text-secondary text-sm cursor-pointer hover:text-primary">
-            <Filter className="size-4" />
-            Filtros avançados
-          </div>
-        </div>
+        <FinanceFilterBar 
+          filters={filters}
+          setFilters={setFilters}
+          availableResponsibles={availableResponsibles}
+          availableChurches={availableChurches}
+          availableCategories={availableCategories}
+          availableOrigins={availableOrigins}
+          availableTypes={availableTypes}
+          availableNatures={availableNatures}
+          availableStatuses={availableStatuses}
+        />
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -169,24 +205,32 @@ export const FinanceTemplate = () => {
         <div className="lg:col-span-8 space-y-8">
           <Card padding="none" className="overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-bold text-text-primary">Lançamentos Recentes</h3>
-              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">32 registros este mês</span>
+              <h3 className="font-bold text-text-primary">Lançamentos</h3>
+              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{transactions.length} registros encontrados</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-background">
                   <tr>
                     <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Data</th>
-                    <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Tipo</th>
+                    <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Responsável</th>
+                    <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Natureza</th>
                     <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Categoria</th>
+                    <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase">Status</th>
                     <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase text-right">Valor</th>
                     <th className="px-6 py-3 text-xs font-bold text-text-secondary uppercase text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredTransactions.map((t, i) => (
+                  {transactions.map((t, i) => (
                     <tr key={i} className="hover:bg-background transition-colors">
-                      <td className="px-6 py-4 text-sm text-text-primary">{t.date}</td>
+                      <td className="px-6 py-4 text-sm text-text-primary whitespace-nowrap">{t.date}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-text-primary">{t.responsible}</span>
+                          <span className="text-[10px] text-text-secondary uppercase">{t.church}</span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <span className={cn(
                           "flex items-center gap-1.5 font-semibold text-sm",
@@ -196,7 +240,25 @@ export const FinanceTemplate = () => {
                           {t.nature}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-text-primary">{t.category}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-text-primary">{t.category}</span>
+                          <span className="text-[10px] text-text-secondary uppercase">{t.origin}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase w-fit",
+                          t.status === 'Confirmado' ? "bg-success/10 text-success" :
+                          t.status === 'Pendente' ? "bg-amber-500/10 text-amber-500" :
+                          "bg-error/10 text-error"
+                        )}>
+                          {t.status === 'Confirmado' ? <CheckCircle2 className="size-3" /> :
+                           t.status === 'Pendente' ? <Clock className="size-3" /> :
+                           <XCircle className="size-3" />}
+                          {t.status}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm font-bold text-right text-text-primary">{formatCurrency(t.value)}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex justify-center gap-2">
@@ -221,10 +283,22 @@ export const FinanceTemplate = () => {
                 <h3 className="font-bold text-text-primary">Evolução de Fluxo</h3>
                 <TrendingUp className="size-4 text-text-secondary" />
               </div>
-              <div className="h-48 flex items-end justify-between gap-2 px-2">
-                {[40, 65, 35, 85, 55, 95].map((h, i) => (
-                  <div key={i} className="w-full bg-primary rounded-t-lg" style={{ height: `${h}%`, opacity: i % 2 === 0 ? 0.3 : 1 }} />
-                ))}
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <XAxis 
+                      dataKey="date" 
+                      hide 
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                      formatter={(value: any) => [formatCurrency(Number(value)), '']}
+                    />
+                    <Bar dataKey="income" fill="#6366f1" radius={[4, 4, 0, 0]} name="Entradas" />
+                    <Bar dataKey="expenses" fill="#f87171" radius={[4, 4, 0, 0]} name="Saídas" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </Card>
 
@@ -233,23 +307,36 @@ export const FinanceTemplate = () => {
                 <h3 className="font-bold text-text-primary">Distribuição por Categoria</h3>
                 <PieChart className="size-4 text-text-secondary" />
               </div>
-              <div className="flex items-center gap-6">
-                <div className="size-32 rounded-full border-[16px] border-primary relative flex items-center justify-center">
-                  <span className="text-xs font-bold text-text-primary">100%</span>
+              <div className="flex items-center gap-6 h-48">
+                <div className="w-1/2 h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                    </RePieChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-primary" />
-                    <span className="text-xs font-medium text-text-primary">Dízimos (65%)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-primary/40" />
-                    <span className="text-xs font-medium text-text-primary">Ofertas (25%)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-border" />
-                    <span className="text-xs font-medium text-text-primary">Outros (10%)</span>
-                  </div>
+                <div className="w-1/2 flex flex-col gap-2 overflow-y-auto max-h-full pr-2">
+                  {categoryData.slice(0, 4).map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-[10px] font-medium text-text-primary truncate">
+                        {item.name} ({item.percent}%)
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>
@@ -260,15 +347,15 @@ export const FinanceTemplate = () => {
         <aside className="lg:col-span-4 space-y-6">
           <Card className="bg-primary text-white border-none shadow-xl shadow-primary/20">
             <p className="text-white/80 text-sm font-medium">Saldo em Caixa</p>
-            <h2 className="text-3xl font-black mt-1">{formatCurrency(totals.balance)}</h2>
+            <h2 className="text-3xl font-black mt-1">{formatCurrency(allTimeTotals.balance)}</h2>
             <div className="mt-6 flex justify-between pt-6 border-t border-white/20">
               <div>
                 <p className="text-white/60 text-[10px] font-bold uppercase">Entradas</p>
-                <p className="text-sm font-bold mt-1 text-emerald-300">+ {formatCurrency(totals.income)}</p>
+                <p className="text-sm font-bold mt-1 text-emerald-300">+ {formatCurrency(allTimeTotals.income)}</p>
               </div>
               <div className="text-right">
                 <p className="text-white/60 text-[10px] font-bold uppercase">Saídas</p>
-                <p className="text-sm font-bold mt-1 text-red-300">- {formatCurrency(totals.expenses)}</p>
+                <p className="text-sm font-bold mt-1 text-red-300">- {formatCurrency(allTimeTotals.expenses)}</p>
               </div>
             </div>
           </Card>
@@ -282,11 +369,7 @@ export const FinanceTemplate = () => {
               <div>
                 <h4 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-4">Entradas por tipo</h4>
                 <div className="space-y-3">
-                  {[
-                    { label: 'Dízimos', value: 5400, percent: 70 },
-                    { label: 'Ofertas Culto', value: 2100, percent: 35 },
-                    { label: 'Eventos', value: 740, percent: 15 },
-                  ].map((item, i) => (
+                  {categoryBreakdown.map((item, i) => (
                     <div key={i} className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium text-text-secondary">{item.label}</span>
@@ -297,10 +380,13 @@ export const FinanceTemplate = () => {
                       </div>
                     </div>
                   ))}
+                  {categoryBreakdown.length === 0 && (
+                    <p className="text-xs text-text-secondary text-center py-4">Nenhuma entrada no período</p>
+                  )}
                 </div>
               </div>
             </div>
-            <Button variant="outline" className="w-full mt-8 text-xs">Ver Relatório Detalhado</Button>
+            <Button variant="outline" className="w-full mt-8 text-xs" onClick={handleExportPDF}>Ver Relatório Detalhado</Button>
           </Card>
         </aside>
       </div>
