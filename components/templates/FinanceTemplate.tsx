@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
+import { Modal } from '@/components/atoms/Modal';
+import { TransactionForm } from '@/components/organisms/TransactionForm';
 import { useSearchParams } from 'next/navigation';
 import { useFinance } from '@/hooks/useFinance';
 import { cn } from '@/shared/utils';
@@ -26,9 +28,10 @@ export const FinanceTemplate = () => {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
   const { transactions, totals, formatCurrency } = useFinance();
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const filteredTransactions = filterParam 
-    ? transactions.filter(t => t.type === filterParam)
+    ? transactions.filter(t => t.nature === filterParam)
     : transactions;
 
   return (
@@ -50,12 +53,20 @@ export const FinanceTemplate = () => {
             <FileText className="size-4" />
             CSV
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
             <Plus className="size-4" />
             Novo Lançamento
           </Button>
         </div>
       </div>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Novo Lançamento Financeiro"
+      >
+        <TransactionForm onSuccess={() => setIsModalOpen(false)} />
+      </Modal>
 
       {/* Filters */}
       <Card padding="sm">
@@ -105,10 +116,10 @@ export const FinanceTemplate = () => {
                       <td className="px-6 py-4">
                         <span className={cn(
                           "flex items-center gap-1.5 font-semibold text-sm",
-                          t.type === 'Entrada' ? 'text-success' : 'text-error'
+                          t.nature === 'Entrada' ? 'text-success' : 'text-error'
                         )}>
-                          {t.type === 'Entrada' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
-                          {t.type}
+                          {t.nature === 'Entrada' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
+                          {t.nature}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-text-primary">{t.category}</td>
