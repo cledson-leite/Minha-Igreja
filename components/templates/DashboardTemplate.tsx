@@ -16,6 +16,7 @@ import { Button } from '@/components/atoms/Button';
 import { formatCurrency } from '@/shared/utils';
 import { Modal } from '@/components/atoms/Modal';
 import { MemberForm } from '@/components/organisms/MemberForm';
+import { TransactionForm } from '@/components/organisms/TransactionForm';
 
 import { useRouter } from 'next/navigation';
 import { useChatStore } from '@/store/useChatStore';
@@ -24,6 +25,7 @@ export const DashboardTemplate = () => {
   const router = useRouter();
   const { sendRandomBirthdayMessage } = useChatStore();
   const [isMemberModalOpen, setIsMemberModalOpen] = React.useState(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = React.useState(false);
 
   const handleCongratulate = (name: string) => {
     sendRandomBirthdayMessage('3'); // Defaulting to Ricardo for demo purposes
@@ -63,7 +65,7 @@ export const DashboardTemplate = () => {
             <Plus className="size-4" />
             Novo Membro
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => router.push('/financeiro')}>
+          <Button variant="outline" className="gap-2" onClick={() => setIsTransactionModalOpen(true)}>
             Nova Transação
           </Button>
         </div>
@@ -75,6 +77,14 @@ export const DashboardTemplate = () => {
         title="Cadastrar Novo Membro"
       >
         <MemberForm onSuccess={() => setIsMemberModalOpen(false)} />
+      </Modal>
+
+      <Modal 
+        isOpen={isTransactionModalOpen} 
+        onClose={() => setIsTransactionModalOpen(false)} 
+        title="Novo Lançamento Financeiro"
+      >
+        <TransactionForm onSuccess={() => setIsTransactionModalOpen(false)} />
       </Modal>
 
       {/* Stats Grid */}

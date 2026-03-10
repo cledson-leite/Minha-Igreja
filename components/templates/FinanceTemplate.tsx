@@ -23,12 +23,86 @@ import { TransactionForm } from '@/components/organisms/TransactionForm';
 import { useSearchParams } from 'next/navigation';
 import { useFinance } from '@/hooks/useFinance';
 import { cn } from '@/shared/utils';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const FinanceTemplate = () => {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
   const { transactions, totals, formatCurrency } = useFinance();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Data', 'Responsável', 'Igreja', 'Tipo', 'Natureza', 'Categoria', 'Origem', 'Valor'];
+    const rows = transactions.map(t => [
+      t.date,
+      t.responsible,
+      t.church,
+      t.type,
+      t.nature,
+      t.category,
+      t.origin,
+      t.value.toString()
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `relatorio_financeiro_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text('Relatório Financeiro', 14, 22);
+    
+    // Add date
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 30);
+    
+    // Add summary
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text(`Saldo Total: ${formatCurrency(totals.balance)}`, 14, 40);
+    doc.text(`Total Entradas: ${formatCurrency(totals.income)}`, 14, 48);
+    doc.text(`Total Saídas: ${formatCurrency(totals.expenses)}`, 14, 56);
+
+    const tableHeaders = [['Data', 'Responsável', 'Igreja', 'Tipo', 'Natureza', 'Categoria', 'Origem', 'Valor']];
+    const tableRows = transactions.map(t => [
+      t.date,
+      t.responsible,
+      t.church,
+      t.type,
+      t.nature,
+      t.category,
+      t.origin,
+      formatCurrency(t.value)
+    ]);
+
+    autoTable(doc, {
+      head: tableHeaders,
+      body: tableRows,
+      startY: 65,
+      theme: 'grid',
+      headStyles: { fillColor: [10, 100, 240] }, // Primary color
+      styles: { fontSize: 8 },
+    });
+
+    doc.save(`relatorio_financeiro_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const filteredTransactions = filterParam 
     ? transactions.filter(t => t.nature === filterParam)
@@ -45,11 +119,11 @@ export const FinanceTemplate = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
             <Download className="size-4" />
             Exportar PDF
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExportCSV}>
             <FileText className="size-4" />
             CSV
           </Button>
